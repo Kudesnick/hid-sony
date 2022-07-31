@@ -1,10 +1,12 @@
 obj-m += hid-sony.o
 
+KERNELDIR ?= /lib/modules/$(shell uname -r)
+
 all:
-	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules
+	make -C $(KERNELDIR)/build M=$(PWD) modules
 
 clean:
-	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
+	make -C $(KERNELDIR)/build M=$(PWD) clean
 
 install:
-	cp hid-sony.ko /lib/modules/$(shell uname -r)/kernel/drivers/hid/
+	cp hid-sony.ko $(KERNELDIR)/kernel/drivers/hid/
