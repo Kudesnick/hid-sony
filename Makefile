@@ -9,4 +9,4 @@ clean:
 	make -C $(KERNELDIR)/build M=$(PWD) clean
 
 install:
-	cp hid-sony.ko $(KERNELDIR)/kernel/drivers/hid/
+	xz -c hid-sony.ko > $(KERNELDIR)/kernel/drivers/hid/hid-sony.ko.xz
