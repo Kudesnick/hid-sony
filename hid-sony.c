@@ -857,6 +857,33 @@ static int navigation_mapping(struct hid_device *hdev, struct hid_input *hi,
 	return -1;
 }
 
+#define PS3_USAGE_ID_DPAD_UP    (4)
+#define PS3_USAGE_ID_DPAD_RIGHT (5)
+#define PS3_USAGE_ID_DPAD_DOWN  (6)
+#define PS3_USAGE_ID_DPAD_LEFT  (7)
+#define PS3_USAGE_ID_L2         (8)
+#define PS3_USAGE_ID_R2         (9)
+#define PS3_USAGE_ID_L1         (10)
+#define PS3_USAGE_ID_R1         (11)
+#define PS3_USAGE_ID_NORTH      (12) /* triangle */
+#define PS3_USAGE_ID_EAST       (13) /* circle */
+#define PS3_USAGE_ID_SOUTH      (14) /* cross */
+#define PS3_USAGE_ID_WEST       (15) /* square */
+
+static const unsigned int btn_axis_map[] = {
+	[PS3_USAGE_ID_L2        ] = ABS_Z,
+	[PS3_USAGE_ID_R2        ] = ABS_RZ,
+	[PS3_USAGE_ID_L1        ] = ABS_GAS,
+	[PS3_USAGE_ID_R1        ] = ABS_BRAKE,
+	[PS3_USAGE_ID_NORTH     ] = ABS_HAT0X, /* triangle */
+	[PS3_USAGE_ID_EAST      ] = ABS_HAT0Y, /* circle */
+	[PS3_USAGE_ID_SOUTH     ] = ABS_HAT1X, /* cross */
+	[PS3_USAGE_ID_WEST      ] = ABS_HAT1Y, /* square */
+	[PS3_USAGE_ID_DPAD_UP   ] = ABS_HAT2X,
+	[PS3_USAGE_ID_DPAD_RIGHT] = ABS_HAT2Y,
+	[PS3_USAGE_ID_DPAD_DOWN ] = ABS_HAT3X,
+	[PS3_USAGE_ID_DPAD_LEFT ] = ABS_HAT3Y,
+};
 
 static int sixaxis_mapping(struct hid_device *hdev, struct hid_input *hi,
 			  struct hid_field *field, struct hid_usage *usage,
@@ -873,24 +900,26 @@ static int sixaxis_mapping(struct hid_device *hdev, struct hid_input *hi,
 		return 1;
 	} else if (usage->hid == HID_GD_POINTER) {
 		/* The DS3 provides analog values for most buttons and even
-		 * for HAT axes through GD Pointer. L2 and R2 are reported
-		 * among these as well instead of as GD Z / RZ. Remap L2
-		 * and R2 and ignore other analog 'button axes' as there is
-		 * no good way for reporting them.
-		 */
-		switch (usage->usage_index) {
-		case 8: /* L2 */
-			usage->hid = HID_GD_Z;
-			break;
-		case 9: /* R2 */
-			usage->hid = HID_GD_RZ;
-			break;
-		default:
-			return -1;
+		 * for HAT axes through GD Pointer.*/
+		if (usage->usage_index >= PS3_USAGE_ID_L2
+		    && usage->usage_index <= PS3_USAGE_ID_R1)
+		{
+			usage->hid = HID_GD_X | btn_axis_map[usage->usage_index];
+			hid_map_usage_clear(hi, usage, bit, max, EV_ABS, usage->hid & 0xf);
+			return 1;
+		}
+		
+		if (usage->usage_index >= PS3_USAGE_ID_DPAD_UP
+		    && usage->usage_index <= PS3_USAGE_ID_WEST)
+		{
+			unsigned int hat = btn_axis_map[usage->usage_index];
+
+			usage->hid = HID_GD_HATSWITCH;
+			hid_map_usage_clear(hi, usage, bit, max, EV_ABS, hat);
+			return 1;
 		}
 
-		hid_map_usage_clear(hi, usage, bit, max, EV_ABS, usage->hid & 0xf);
-		return 1;
+		return -1;
 	} else if ((usage->hid & HID_USAGE_PAGE) == HID_UP_GENDESK) {
 		unsigned int abs = usage->hid & HID_USAGE;
 
