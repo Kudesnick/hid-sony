@@ -1744,6 +1744,7 @@ static int dualshock4_get_calibration_data(struct sony_sc *sc)
 	short acc_z_plus, acc_z_minus;
 	int speed_2x;
 	int range_2g;
+	int calib_id;
 
 	/* For Bluetooth we use a different request, which supports CRC.
 	 * Note: in Bluetooth mode feature report 0x02 also changes the state
@@ -1887,6 +1888,23 @@ static int dualshock4_get_calibration_data(struct sony_sc *sc)
 	sc->ds4_calib_data[5].bias = acc_z_plus - range_2g / 2;
 	sc->ds4_calib_data[5].sens_numer = 2*DS4_ACC_RES_PER_G;
 	sc->ds4_calib_data[5].sens_denom = range_2g;
+
+	for (calib_id = 0; calib_id < 6; calib_id++) {
+			/* Ensure there are no denominators equal to zero to prevent
+			 * crashes while dividing by that number.
+			 */
+
+			if (sc->ds4_calib_data[calib_id].sens_denom != 0) {
+				/* Denominator OK, skip this */
+				continue;
+			}
+
+			sc->ds4_calib_data[calib_id].sens_denom = 1;
+
+			hid_warn(sc->hdev,
+					"DualShock 4 USB dongle: invalid calibration for sensor %d\n",
+					calib_id);
+	}
 
 err_stop:
 	kfree(buf);
